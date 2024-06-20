@@ -57,7 +57,8 @@ def loss(t: np.ndarray, model: torch.nn.Module):
         create_graph=True,
     )[0]  # take first an only element of the tuple (gradients wrt t)
 
-    # Loss is the square of the difference between the predicted derivative and the actual derivative
+    # Loss is the square of the difference between the
+    # predicted derivative and the actual derivative
     ode_loss = y_pred_dt - torch.cos(2 * np.pi * t)
     initial_condition_loss = model(t_0) - one
     square_loss = torch.pow(ode_loss, 2) + torch.pow(initial_condition_loss, 2)
@@ -72,6 +73,7 @@ def exact_solution(t):
 
 
 def main():
+    """Train the PINN and evaluate it against the exact solution"""
     demo_pinn = DemoPINN()
     optimizer = torch.optim.Adam(demo_pinn.parameters(), lr=0.01)
 
