@@ -14,6 +14,9 @@ import tqdm
 
 PLOTLY_TEMPLATE = "plotly_dark"
 
+TRAINING_T_RANGE = (0, 2)
+TESTING_T_RANGE = (0, 5)
+
 
 class DemoPINN(torch.nn.Module):
     """Define the simple 1 layer network"""
@@ -77,13 +80,13 @@ def main():
     for _ in tqdm.trange(1_000):
         demo_pinn.train()
         optimizer.zero_grad()
-        loss_val = loss(np.random.rand(30), demo_pinn)
+        loss_val = loss(np.random.rand(30) * TRAINING_T_RANGE[1], demo_pinn)
         train_losses.append(loss_val.item())
         loss_val.backward()
         optimizer.step()
 
     # Evaluate the model
-    t = np.linspace(0, 1, 100)
+    t = np.linspace(TESTING_T_RANGE[0], TESTING_T_RANGE[1], 100)
 
     demo_pinn.eval()
     with torch.no_grad():
@@ -119,6 +122,9 @@ def main():
         go.Scatter(x=t, y=y_exact, mode="lines", name="Exact"),
         row=1,
         col=2,
+    )
+    fig.add_vrect(
+        x0=TRAINING_T_RANGE[0], x1=TRAINING_T_RANGE[1], fillcolor="green", opacity=0.2
     )
 
     fig.update_layout(title="PINN vs Exact solution", template=PLOTLY_TEMPLATE)
