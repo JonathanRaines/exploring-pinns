@@ -129,7 +129,7 @@ def main():
     demo_pinn = DemoPINN(
         input_dim=1,
         output_dim=1,
-        num_residual_blocks=3,
+        num_residual_blocks=3,  # 3 seems to work well with Tanh, more leads to instability.
         hidden_dim=32,
     )
 
