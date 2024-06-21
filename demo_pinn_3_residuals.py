@@ -26,23 +26,49 @@ TEMP_0 = 50  # deg C
 TEMP_AMBIENT = 20  # deg C
 
 
-class DemoPINN(torch.nn.Module):
-    """Define the simple 1 layer network"""
+class ResidualBlock(torch.nn.Module):
+    """Define a residual block"""
 
-    def __init__(self):
-        super(DemoPINN, self).__init__()
-        self.linear1 = torch.nn.Linear(in_features=1, out_features=32)
+    def __init__(self, hidden_dim: int):
+        super(ResidualBlock, self).__init__()
+        self.linear = torch.nn.Linear(in_features=hidden_dim, out_features=hidden_dim)
         self.activation1 = torch.nn.Tanh()
-        self.output = torch.nn.Linear(in_features=32, out_features=1)
 
     def forward(self, x):
         """Forward pass"""
         residual = x
-        x = self.linear1(x)
-        x = self.activation1(x)
-        y = self.output(x) + residual  # The residual connection
+        x = self.linear(x)
         # This makes a massive difference to generalisation, compare to the previous PINN
-        return y
+        x += residual
+        x = self.activation1(x)
+        x = torch.nn.functional.layer_norm(x, x.shape)
+        return x
+
+
+class DemoPINN(torch.nn.Sequential):
+    """Define the simple 1 layer network"""
+
+    def __init__(
+        self,
+        input_dim: int,
+        output_dim: int,
+        num_residual_blocks: int,
+        hidden_dim: int = 32,
+    ):
+        residuals = self._make_residual_block(hidden_dim, num_residual_blocks)
+        super(DemoPINN, self).__init__(
+            torch.nn.Linear(in_features=input_dim, out_features=hidden_dim),
+            *residuals,
+            torch.nn.Linear(in_features=hidden_dim, out_features=output_dim),
+        )
+
+    def _make_residual_block(
+        self, hidden_dim: int, num_residual_blocks: int
+    ) -> list[torch.nn.Module]:
+        blocks = []
+        for _ in range(num_residual_blocks):
+            blocks.append(ResidualBlock(hidden_dim))
+        return blocks
 
 
 def pinn_loss(
@@ -98,7 +124,16 @@ def noisy_exact_solution(t, coef, temp_0, temp_ambient, noise_std=0.5):
 
 def main():
     """Train the PINN and evaluate it against the exact solution"""
-    demo_pinn = DemoPINN()
+
+    # Define the model
+    demo_pinn = DemoPINN(
+        input_dim=1,
+        output_dim=1,
+        num_residual_blocks=3,
+        hidden_dim=32,
+    )
+
+    # Define the optimizer and basic (non-physics informed) loss function
     optimizer = torch.optim.Adam(demo_pinn.parameters(), lr=0.01)
     basic_loss = torch.nn.MSELoss()
 
@@ -178,7 +213,12 @@ def main():
     fig.update_layout(title="PINN vs Exact solution", template=PLOTLY_TEMPLATE)
     fig.show()
 
-    print("Test Loss:", basic_loss(torch.tensor(y_pred), torch.tensor(y_exact)).item())
+    print("Model", demo_pinn)
+
+    print(
+        "Test Loss:",
+        f"{basic_loss(torch.tensor(y_pred), torch.tensor(y_exact)).item():,.4f}",
+    )
 
 
 if __name__ == "__main__":
