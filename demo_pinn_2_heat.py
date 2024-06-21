@@ -16,7 +16,7 @@ import tqdm
 PLOTLY_TEMPLATE = "plotly_dark"
 
 TRAINING_T_RANGE = (0, 2)
-TESTING_T_RANGE = (0, 2)
+TESTING_T_RANGE = (0, 5)
 
 COEF = 2
 TEMP_0 = 50  # deg C
